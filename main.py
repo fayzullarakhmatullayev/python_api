@@ -40,6 +40,12 @@ my_posts = [
 ]
 
 
+def find_index_post(id):
+    for i, p in enumerate(my_posts):
+        if p['id'] == id:
+            return i
+
+
 @app.get("/")
 async def root():
     return {"message": "welcome to the api"}
@@ -79,3 +85,15 @@ async def delete_post(id: int, response: Response):
             return {"data": f"post with id {id} deleted"}
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"post with id {id} not found")
+
+
+@app.put('/posts/{id}')
+async def update_post(id: int, post: Post):
+    index = find_index_post(id)
+    if index == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"post with id: {id} does not exist")
+    post_dict = post.dict()
+    post_dict['id'] = id
+    my_posts[index] = post_dict
+    return {"data": post_dict}
