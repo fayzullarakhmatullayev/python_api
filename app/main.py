@@ -1,20 +1,11 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends
-from pydantic import BaseModel
-from typing import Optional
 from sqlalchemy.orm import Session
-from . import models
+from . import models, schemas
 from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-
-class Post (BaseModel):
-    id: Optional[int] = None
-    title: str
-    content: str
-    published: bool = True
 
 
 # while True:
@@ -44,7 +35,7 @@ async def get_posts(db: Session = Depends(get_db)):
 
 
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
-async def create_post(post: Post, db: Session = Depends(get_db)):
+async def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute(
     #     "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *", (post.title, post.content, post.published))
     # new_post = cursor.fetchone()
@@ -86,18 +77,18 @@ async def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @app.put('/posts/{id}')
-async def update_post(id: int, updated_post: Post, db: Session = Depends(get_db)):
+def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cursor.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *",
     #                (post.title, post.content, post.published, str(id),))
 
     # updated_post = cursor.fetchone()
     # conn.commit()
 
-    post = db.query(models.Post).filter(models.Post.id == id)
-
-    if post.first() == None:
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+    post = post_query.first()
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id {id} not found")
-    post.update(updated_post.dict(), synchronize_session=False)
+    post_query.update(updated_post.dict(), synchronize_session=False)
     db.commit()
-    return {"data": post.first()}
+    return {"data": post_query.first()}
